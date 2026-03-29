@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reconnectHid: () => ipcRenderer.invoke('reconnect-hid'),
   saveData: (filename, data) => ipcRenderer.invoke('save-data', filename, data),
   loadData: (filename) => ipcRenderer.invoke('load-data', filename),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_event, version) => callback(version)),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
   windowClose: () => ipcRenderer.invoke('window-close'),

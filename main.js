@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const HID = require('node-hid');
@@ -151,6 +152,18 @@ app.whenReady().then(() => {
     app.dock.setIcon(path.join(__dirname, 'assets', 'icon.png'));
   }
   createWindow();
+
+  // Auto-update
+  autoUpdater.autoDownload = false;
+  autoUpdater.checkForUpdates().catch(() => {});
+
+  autoUpdater.on('update-available', (info) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('update-available', info.version);
+  });
+
+  ipcMain.handle('download-update', () => autoUpdater.downloadUpdate());
+  autoUpdater.on('update-downloaded', () => autoUpdater.quitAndInstall());
 });
 
 app.on('window-all-closed', () => {

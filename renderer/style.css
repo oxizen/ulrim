@@ -74,6 +74,54 @@ body {
   color: #fff;
 }
 
+/* --- Update Bar --- */
+
+#update-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: #0f3460;
+  font-size: 12px;
+  color: #eee;
+  flex-shrink: 0;
+}
+
+#update-bar button {
+  padding: 3px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#btn-update {
+  background: #e94560;
+  color: #fff;
+}
+
+#btn-update:hover:not(:disabled) {
+  background: #d63851;
+}
+
+#btn-update:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#btn-dismiss-update {
+  background: transparent;
+  color: #888;
+  border: 1px solid #333 !important;
+}
+
+#btn-dismiss-update:hover {
+  color: #eee;
+  border-color: #555 !important;
+}
+
 /* --- App --- */
 
 #app {

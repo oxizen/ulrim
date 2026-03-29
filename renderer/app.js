@@ -833,6 +833,27 @@ if (window.electronAPI && window.electronAPI.onInputEvent) {
 
 // --- Init ---
 
+// --- Auto Update ---
+
+if (window.electronAPI && window.electronAPI.onUpdateAvailable) {
+  window.electronAPI.onUpdateAvailable((version) => {
+    const bar = document.createElement('div');
+    bar.id = 'update-bar';
+    bar.innerHTML = `
+      <span>새 버전 v${version} 이 있습니다</span>
+      <button id="btn-update">업데이트</button>
+      <button id="btn-dismiss-update">닫기</button>
+    `;
+    document.body.insertBefore(bar, document.getElementById('app'));
+    document.getElementById('btn-update').addEventListener('click', () => {
+      bar.querySelector('span').textContent = '다운로드 중...';
+      document.getElementById('btn-update').disabled = true;
+      window.electronAPI.downloadUpdate();
+    });
+    document.getElementById('btn-dismiss-update').addEventListener('click', () => bar.remove());
+  });
+}
+
 // --- Titlebar ---
 
 document.getElementById('btn-minimize').addEventListener('click', () => window.electronAPI.windowMinimize());
