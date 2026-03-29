@@ -46,6 +46,11 @@ body {
   font-weight: 700;
 }
 
+.titlebar-version {
+  font-size: 10px;
+  color: #555;
+}
+
 #titlebar-controls {
   display: flex;
   height: 100%;

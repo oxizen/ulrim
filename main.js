@@ -171,6 +171,7 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
+ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('window-minimize', () => mainWindow.minimize());
 ipcMain.handle('window-maximize', () => {
   mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();

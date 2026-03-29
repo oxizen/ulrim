@@ -833,6 +833,12 @@ if (window.electronAPI && window.electronAPI.onInputEvent) {
 
 // --- Init ---
 
+// --- Version ---
+
+window.electronAPI.getVersion().then(v => {
+  document.getElementById('titlebar-version').textContent = `v${v}`;
+});
+
 // --- Auto Update ---
 
 if (window.electronAPI && window.electronAPI.onUpdateAvailable) {
