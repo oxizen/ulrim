@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Input Debug</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', monospace;
+      background: #1a1a2e;
+      color: #eee;
+      height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    h1 { color: #e94560; font-size: 20px; }
+    p { color: #888; font-size: 14px; }
+    #current {
+      background: #16213e;
+      border: 2px solid #0f3460;
+      border-radius: 10px;
+      padding: 24px;
+      font-size: 18px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      transition: border-color 0.1s;
+    }
+    #current.active { border-color: #e94560; }
+    #current .label { color: #888; font-size: 12px; }
+    #current .value { color: #e94560; font-size: 24px; font-weight: bold; }
+    #log {
+      flex: 1;
+      overflow-y: auto;
+      background: #0a0a1a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a2e;
+      display: grid;
+      grid-template-columns: 80px 60px 120px 1fr;
+      gap: 8px;
+    }
+    .log-entry .type { color: #e94560; }
+    .log-entry .key { color: #4ecdc4; }
+    .log-entry .code { color: #ffe66d; }
+    .log-entry .extra { color: #888; }
+    #btn-clear {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: #333;
+      color: #eee;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    #btn-clear:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <h1>Input Debug - Bluetooth Device</h1>
+  <p>블루투스 디바이스의 버튼을 눌러보세요. 어떤 입력이 들어오는지 표시됩니다.</p>
+  <button id="btn-clear">Clear Log</button>
+
+  <div id="current">
+    <div>대기 중... 아무 버튼이나 눌러보세요</div>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const currentEl = document.getElementById('current');
+    const logEl = document.getElementById('log');
+    let entryCount = 0;
+
+    function addLog(type, data) {
+      entryCount++;
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <span class="type">${type}</span>
+        <span class="key">${data.key || ''}</span>
+        <span class="code">${data.code || ''}</span>
+        <span class="extra">${data.extra || ''}</span>
+      `;
+      logEl.prepend(entry);
+
+      currentEl.classList.add('active');
+      setTimeout(() => currentEl.classList.remove('active'), 150);
+    }
+
+    // Keyboard events
+    document.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      currentEl.innerHTML = `
+        <div><span class="label">Event:</span> <span class="value">keydown</span></div>
+        <div><span class="label">Key:</span> <span class="value">${e.key}</span></div>
+        <div><span class="label">Code:</span> <span class="value">${e.code}</span></div>
+        <div><span class="label">KeyCode:</span> ${e.keyCode} | <span class="label">Which:</span> ${e.which}</div>
+        <div><span class="label">Modifiers:</span> ctrl=${e.ctrlKey} alt=${e.altKey} shift=${e.shiftKey} meta=${e.metaKey}</div>
+      `;
+      addLog('keydown', { key: e.key, code: e.code, extra: `keyCode=${e.keyCode} shift=${e.shiftKey} ctrl=${e.ctrlKey}` });
+    });
+
+    document.addEventListener('keyup', (e) => {
+      e.preventDefault();
+      addLog('keyup', { key: e.key, code: e.code });
+    });
+
+    // Gamepad support (some BT devices register as gamepads)
+    let gamepadInterval = null;
+
+    window.addEventListener('gamepadconnected', (e) => {
+      currentEl.innerHTML = `
+        <div><span class="value">Gamepad Connected!</span></div>
+        <div><span class="label">Name:</span> ${e.gamepad.id}</div>
+        <div><span class="label">Buttons:</span> ${e.gamepad.buttons.length}</div>
+        <div><span class="label">Axes:</span> ${e.gamepad.axes.length}</div>
+      `;
+      addLog('gamepad', { key: 'connected', code: e.gamepad.id, extra: `buttons=${e.gamepad.buttons.length} axes=${e.gamepad.axes.length}` });
+      startGamepadPoll();
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      addLog('gamepad', { key: 'disconnected', code: e.gamepad.id });
+      if (gamepadInterval) clearInterval(gamepadInterval);
+    });
+
+    const prevButtons = {};
+    function startGamepadPoll() {
+      if (gamepadInterval) clearInterval(gamepadInterval);
+      gamepadInterval = setInterval(() => {
+        const gamepads = navigator.getGamepads();
+        for (const gp of gamepads) {
+          if (!gp) continue;
+          gp.buttons.forEach((btn, i) => {
+            const key = `${gp.index}-${i}`;
+            if (btn.pressed && !prevButtons[key]) {
+              currentEl.innerHTML = `
+                <div><span class="label">Event:</span> <span class="value">gamepad button</span></div>
+                <div><span class="label">Gamepad:</span> ${gp.id}</div>
+                <div><span class="label">Button:</span> <span class="value">${i}</span></div>
+                <div><span class="label">Value:</span> ${btn.value}</div>
+              `;
+              addLog('gp-btn', { key: `btn[${i}]`, code: gp.id.substring(0, 20), extra: `value=${btn.value}` });
+            }
+            prevButtons[key] = btn.pressed;
+          });
+        }
+      }, 16);
+    }
+
+    // Mouse/pointer events (some BT devices send mouse clicks)
+    document.addEventListener('mousedown', (e) => {
+      addLog('mouse', { key: `btn${e.button}`, code: `(${e.clientX},${e.clientY})`, extra: `buttons=${e.buttons}` });
+    });
+
+    // Wheel events
+    document.addEventListener('wheel', (e) => {
+      addLog('wheel', { key: `${e.deltaY > 0 ? 'down' : 'up'}`, code: `dY=${e.deltaY}`, extra: `dX=${e.deltaX}` });
+    });
+
+    // Media key events from main process
+    if (window.electronAPI && window.electronAPI.onInputEvent) {
+      window.electronAPI.onInputEvent((data) => {
+        currentEl.innerHTML = `
+          <div><span class="label">Event:</span> <span class="value">${data.type}</span></div>
+          <div><span class="label">Key:</span> <span class="value">${data.key}</span></div>
+          <div style="color:#4ecdc4; margin-top:8px;">Captured via globalShortcut (media key)</div>
+        `;
+        addLog(data.type, { key: data.key, code: 'global', extra: 'from main process' });
+      });
+    }
+
+    // MediaSession API - register as active media app to capture BT media keys
+    const silentAudio = new Audio('silence.wav');
+    silentAudio.loop = true;
+    silentAudio.volume = 0.01;
+
+    // Must set metadata and playbackState for macOS to route media keys here
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'OPlayer Input Debug',
+      artist: 'Listening for input...',
+    });
+
+    async function startMediaSession() {
+      try {
+        await silentAudio.play();
+        navigator.mediaSession.playbackState = 'playing';
+        addLog('system', { key: 'media-session', code: 'started', extra: 'listening for media keys' });
+      } catch (err) {
+        addLog('error', { key: 'media-session', code: 'failed', extra: err.message });
+      }
+    }
+    startMediaSession();
+
+    const mediaActions = ['play', 'pause', 'previoustrack', 'nexttrack', 'stop', 'seekbackward', 'seekforward'];
+    mediaActions.forEach(action => {
+      try {
+        navigator.mediaSession.setActionHandler(action, () => {
+          currentEl.innerHTML = `
+            <div><span class="label">Event:</span> <span class="value">MediaSession</span></div>
+            <div><span class="label">Action:</span> <span class="value">${action}</span></div>
+            <div style="color:#4ecdc4; margin-top:8px;">BT remote media key detected!</div>
+          `;
+          addLog('media', { key: action, code: 'MediaSession', extra: 'BT remote' });
+
+          // Keep playing so we keep receiving events
+          navigator.mediaSession.playbackState = 'playing';
+          if (silentAudio.paused) silentAudio.play().catch(() => {});
+        });
+      } catch (e) {
+        addLog('error', { key: action, code: 'handler-fail', extra: e.message });
+      }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      logEl.innerHTML = '';
+      entryCount = 0;
+    });
+  </script>
+</body>
+</html>

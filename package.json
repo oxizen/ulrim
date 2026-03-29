@@ -1,0 +1,37 @@
+{
+  "name": "ulrim",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "unset ELECTRON_RUN_AS_NODE && electron .",
+    "build": "electron-builder --win"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "울림 - Live performance sound board",
+  "build": {
+    "appId": "com.ulrim.soundboard",
+    "productName": "울림",
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "node-hid": "^3.3.0"
+  }
+}

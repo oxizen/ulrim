@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b81"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)" stroke="#0f3460" stroke-width="8"/>
+
+  <!-- Sound wave rings expanding from center -->
+  <circle cx="256" cy="268" r="130" fill="none" stroke="#4ecdc4" stroke-width="3" opacity="0.15"/>
+  <circle cx="256" cy="268" r="170" fill="none" stroke="#4ecdc4" stroke-width="2.5" opacity="0.1"/>
+  <circle cx="256" cy="268" r="210" fill="none" stroke="#4ecdc4" stroke-width="2" opacity="0.07"/>
+
+  <!-- Korean 울림 centered -->
+  <text x="256" y="310"
+        font-family="'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+        font-size="170"
+        font-weight="900"
+        fill="url(#accent)"
+        text-anchor="middle"
+        dominant-baseline="central">울림</text>
+</svg>

@@ -1,0 +1,551 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+/* --- Sidebar --- */
+
+#sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #12122a;
+  border-right: 1px solid #0f3460;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#preset-section {
+  flex-shrink: 0;
+  border-bottom: 1px solid #0f3460;
+}
+
+#library-section {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 12px 8px;
+}
+
+.sidebar-header h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 1px;
+}
+
+.sidebar-header button {
+  background: none;
+  border: 1px solid #333;
+  color: #888;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-header button:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+#preset-list, #library-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+#preset-list li, #library-list li {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 3px solid transparent;
+  transition: all 0.1s;
+}
+
+#preset-list li:hover, #library-list li:hover {
+  background: #1a1a3e;
+}
+
+#preset-list li.active {
+  background: #16213e;
+  border-left-color: #e94560;
+  color: #fff;
+}
+
+#preset-list li .preset-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#preset-list li .preset-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+#preset-list li:hover .preset-actions {
+  opacity: 1;
+}
+
+.preset-actions button, .lib-item-remove {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.preset-actions button:hover, .lib-item-remove:hover {
+  color: #e94560;
+}
+
+#library-list li {
+  font-size: 12px;
+  color: #aaa;
+  cursor: grab;
+}
+
+#library-list li.dragging {
+  opacity: 0.4;
+}
+
+#library-list li .lib-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Main --- */
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e94560;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hid-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #333;
+  transition: all 0.15s;
+}
+
+.hid-status:hover {
+  border-color: #555;
+}
+
+.hid-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.hid-status.connected .hid-dot {
+  background: #4ecdc4;
+  box-shadow: 0 0 6px #4ecdc4;
+}
+
+.hid-status.connected .hid-label {
+  color: #4ecdc4;
+}
+
+.hid-status.disconnected .hid-dot {
+  background: #555;
+}
+
+.hid-status.disconnected .hid-label {
+  color: #555;
+}
+
+.hid-status.scanning .hid-dot {
+  background: #ffe66d;
+  animation: blink 0.6s ease-in-out infinite;
+}
+
+.hid-status.scanning .hid-label {
+  color: #ffe66d;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.controls button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s;
+  background: #333;
+  color: #eee;
+}
+
+.controls button:hover {
+  background: #555;
+}
+
+/* --- Sections --- */
+
+#sections-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #12122a;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #0f3460;
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+#section-sfx .section-title { color: #4ecdc4; }
+#section-mr .section-title { color: #ffe66d; }
+
+/* --- Pad Grid --- */
+
+.pad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.pad-grid .loading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 13px;
+  height: 80px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.pad-grid:empty::after {
+  content: 'Drag sounds here from library';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  font-size: 13px;
+  grid-column: 1 / -1;
+  height: 80px;
+}
+
+.pad-grid.drag-target-active {
+  background: rgba(78, 205, 196, 0.05);
+  outline: 2px dashed #4ecdc4;
+  outline-offset: -2px;
+}
+
+.pad {
+  position: relative;
+  background: #16213e;
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+  min-height: 100px;
+  justify-content: center;
+}
+
+.pad.selected {
+  border-color: #4ecdc4;
+  background: #1a2744;
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+}
+
+.pad:hover {
+  border-color: #e94560;
+  background: #1a2744;
+}
+
+.pad:active {
+  transform: scale(0.96);
+}
+
+.pad.playing {
+  border-color: #e94560;
+}
+
+.pad .time-display {
+  font-size: 10px;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  min-height: 14px;
+}
+
+.pad.playing .time-display {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pad .name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.pad .shortcut {
+  font-size: 10px;
+  color: #888;
+  background: #0a0a1a;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pad.playing .shortcut {
+  color: #ddd;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.pad .volume-slider {
+  width: 100%;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+
+.pad .btn-remove {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px;
+}
+
+.pad .btn-remove:hover {
+  color: #e94560;
+}
+
+/* --- Drag Handle --- */
+
+.pad .drag-handle {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  color: #333;
+  font-size: 11px;
+  cursor: grab;
+  padding: 2px 4px;
+  line-height: 1;
+  user-select: none;
+}
+
+.pad .drag-handle:hover {
+  color: #888;
+}
+
+.pad .drag-handle:active {
+  cursor: grabbing;
+}
+
+/* --- Drag and Drop --- */
+
+.pad.dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.pad.drag-over {
+  border-color: #4ecdc4;
+  background: #1a2744;
+  box-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+}
+
+/* --- Modal --- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 500px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal h2 {
+  font-size: 16px;
+  color: #e94560;
+}
+
+.modal input[type="text"] {
+  background: #0a0a1a;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+
+.modal input[type="text"]:focus {
+  border-color: #e94560;
+}
+
+.modal .lib-pick-list {
+  list-style: none;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.modal .lib-pick-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+
+.modal .lib-pick-list li:hover {
+  background: #1a1a3e;
+}
+
+.modal .lib-pick-list li.picked {
+  background: #e94560;
+  color: #fff;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modal-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal-buttons .btn-confirm {
+  background: #e94560;
+  color: white;
+}
+
+.modal-buttons .btn-cancel {
+  background: #333;
+  color: #eee;
+}

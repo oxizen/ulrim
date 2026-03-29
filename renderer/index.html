@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>울림</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div id="preset-section">
+        <div class="sidebar-header">
+          <h3>Presets</h3>
+          <button id="btn-new-preset" title="New preset">+</button>
+        </div>
+        <ul id="preset-list"></ul>
+      </div>
+      <div id="library-section">
+        <div class="sidebar-header">
+          <h3>Library</h3>
+          <button id="btn-add-library" title="Add to library">+</button>
+        </div>
+        <ul id="library-list"></ul>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <h1 id="preset-title">울림</h1>
+        <div class="controls">
+          <div id="hid-status" class="hid-status disconnected" title="Click to reconnect">
+            <span class="hid-dot"></span>
+            <span class="hid-label">JX-11</span>
+          </div>
+          <button id="btn-stop-all" title="Stop all (Escape)">Stop All</button>
+          <button id="btn-input-debug" title="Input Debug">Input Debug</button>
+        </div>
+      </header>
+      <div id="sections-container">
+        <div class="section" id="section-sfx" data-section="sfx">
+          <div class="section-header">
+            <span class="section-title">효과음</span>
+          </div>
+          <div class="pad-grid" data-section="sfx"></div>
+        </div>
+        <div class="section" id="section-mr" data-section="mr">
+          <div class="section-header">
+            <span class="section-title">넘버 MR</span>
+          </div>
+          <div class="pad-grid" data-section="mr"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
