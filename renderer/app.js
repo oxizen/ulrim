@@ -601,10 +601,16 @@ function renderSection(section) {
   });
 }
 
+function updateStopAllButton() {
+  const isPlaying = allPads().some(p => p.source || (p.pausedAt != null && p.pausedAt > 0));
+  document.getElementById('btn-stop-all').disabled = !isPlaying;
+}
+
 function updatePadUI(pad) {
   const el = document.querySelector(`[data-pad-id="${pad.id}"]`);
   if (!el) return;
   el.classList.toggle('playing', !!pad.source);
+  updateStopAllButton();
 }
 
 function updateAllPadUI() {
@@ -827,6 +833,14 @@ if (window.electronAPI && window.electronAPI.onInputEvent) {
 
 // --- Init ---
 
+// --- Titlebar ---
+
+document.getElementById('btn-minimize').addEventListener('click', () => window.electronAPI.windowMinimize());
+document.getElementById('btn-maximize').addEventListener('click', () => window.electronAPI.windowMaximize());
+document.getElementById('btn-close').addEventListener('click', () => window.electronAPI.windowClose());
+
+// --- Init ---
+
 document.getElementById('btn-add-library').addEventListener('click', async () => {
   const files = await window.electronAPI.selectSoundFiles();
   if (files.length > 0) addToLibrary(files);
@@ -834,7 +848,6 @@ document.getElementById('btn-add-library').addEventListener('click', async () =>
 
 document.getElementById('btn-new-preset').addEventListener('click', () => showNewPresetModal());
 document.getElementById('btn-stop-all').addEventListener('click', stopAll);
-document.getElementById('btn-input-debug').addEventListener('click', () => window.electronAPI.openInputDebug());
 
 // HID status
 const hidStatusEl = document.getElementById('hid-status');

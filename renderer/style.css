@@ -4,17 +4,87 @@
   box-sizing: border-box;
 }
 
+html, body {
+  background: #0a0a1a;
+}
+
 body {
   font-family: 'Segoe UI', sans-serif;
-  background: #1a1a2e;
   color: #eee;
   overflow: hidden;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+
+/* --- Custom Titlebar --- */
+
+#titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  background: #0a0a1a;
+  border-bottom: 1px solid #0f3460;
+  user-select: none;
+}
+
+#titlebar-drag {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  height: 100%;
+  -webkit-app-region: drag;
+}
+
+.titlebar-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.titlebar-title {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+}
+
+#titlebar-controls {
+  display: flex;
+  height: 100%;
+}
+
+.titlebar-btn {
+  background: none;
+  border: none;
+  color: #888;
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn:hover {
+  background: #2a2a4a;
+  color: #eee;
+}
+
+.titlebar-btn-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+/* --- App --- */
 
 #app {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 /* --- Sidebar --- */
@@ -234,20 +304,29 @@ header h1 {
   50% { opacity: 0.3; }
 }
 
-.controls button {
-  padding: 8px 16px;
-  border: none;
+.btn-stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #e9456044;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.15s;
-  background: #333;
-  color: #eee;
+  transition: all 0.15s;
+  background: transparent;
+  color: #e94560;
 }
 
-.controls button:hover {
-  background: #555;
+.btn-stop:hover:not(:disabled) {
+  background: #e9456022;
+  border-color: #e94560;
+}
+
+.btn-stop:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 /* --- Sections --- */

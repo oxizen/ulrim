@@ -130,6 +130,7 @@ function createWindow() {
     minHeight: 600,
     title: '울림 - Sound Board',
     icon: path.join(__dirname, 'assets', 'icon.png'),
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -138,6 +139,9 @@ function createWindow() {
   });
 
   mainWindow.loadFile('renderer/index.html');
+
+  mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized'));
+  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-unmaximized'));
   jx11ScanStart = Date.now();
   connectJX11();
 }
@@ -153,6 +157,13 @@ app.on('window-all-closed', () => {
   if (hidDevice) { try { hidDevice.close(); } catch {} }
   app.quit();
 });
+
+ipcMain.handle('window-minimize', () => mainWindow.minimize());
+ipcMain.handle('window-maximize', () => {
+  mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
+});
+ipcMain.handle('window-close', () => mainWindow.close());
+ipcMain.handle('window-is-maximized', () => mainWindow.isMaximized());
 
 ipcMain.handle('reconnect-hid', () => {
   if (hidDevice) { try { hidDevice.close(); } catch {} hidDevice = null; }

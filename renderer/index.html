@@ -7,6 +7,23 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="titlebar">
+    <div id="titlebar-drag">
+      <img src="../assets/icon.png" class="titlebar-icon" alt="">
+      <span class="titlebar-title">울림</span>
+    </div>
+    <div id="titlebar-controls">
+      <button id="btn-minimize" class="titlebar-btn" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button id="btn-maximize" class="titlebar-btn" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+      <button id="btn-close" class="titlebar-btn titlebar-btn-close" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+  </div>
   <div id="app">
     <aside id="sidebar">
       <div id="preset-section">
@@ -32,8 +49,10 @@
             <span class="hid-dot"></span>
             <span class="hid-label">JX-11</span>
           </div>
-          <button id="btn-stop-all" title="Stop all (Escape)">Stop All</button>
-          <button id="btn-input-debug" title="Input Debug">Input Debug</button>
+          <button id="btn-stop-all" class="btn-stop" title="Stop all (Escape)" disabled>
+            <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>
+            Stop All
+          </button>
         </div>
       </header>
       <div id="sections-container">
