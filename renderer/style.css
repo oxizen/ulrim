@@ -40,15 +40,10 @@ body {
   -webkit-app-region: drag;
 }
 
-.titlebar-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.titlebar-title {
+.titlebar-logo {
   font-size: 12px;
-  color: #888;
-  font-weight: 600;
+  color: #e94560;
+  font-weight: 700;
 }
 
 #titlebar-controls {
