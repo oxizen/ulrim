@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
   windowClose: () => ipcRenderer.invoke('window-close'),
   windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  getHidDevices: () => ipcRenderer.invoke('get-hid-devices'),
+
   onWindowMaximizeChange: (callback) => {
     ipcRenderer.on('window-maximized', () => callback(true));
     ipcRenderer.on('window-unmaximized', () => callback(false));

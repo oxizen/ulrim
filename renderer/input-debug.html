@@ -53,10 +53,14 @@
     .log-entry .key { color: #4ecdc4; }
     .log-entry .code { color: #ffe66d; }
     .log-entry .extra { color: #888; }
-    #btn-clear {
+    .top-buttons {
       position: fixed;
       top: 16px;
       right: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    .top-buttons button {
       background: #333;
       color: #eee;
       border: none;
@@ -65,18 +69,41 @@
       cursor: pointer;
       font-size: 13px;
     }
-    #btn-clear:hover { background: #555; }
+    .top-buttons button:hover { background: #555; }
+    #hid-devices {
+      background: #0a0a1a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    #hid-devices.visible { display: block; }
+    .hid-device {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a2e;
+      color: #ccc;
+    }
+    .hid-device .dev-name { color: #e94560; font-weight: bold; }
+    .hid-device .dev-ids { color: #ffe66d; }
+    .hid-device .dev-usage { color: #4ecdc4; }
   </style>
 </head>
 <body>
   <h1>Input Debug - Bluetooth Device</h1>
   <p>블루투스 디바이스의 버튼을 눌러보세요. 어떤 입력이 들어오는지 표시됩니다.</p>
-  <button id="btn-clear">Clear Log</button>
+  <div class="top-buttons">
+    <button id="btn-scan-hid">HID 디바이스 스캔</button>
+    <button id="btn-clear">Clear Log</button>
+  </div>
 
   <div id="current">
     <div>대기 중... 아무 버튼이나 눌러보세요</div>
   </div>
 
+  <div id="hid-devices"></div>
   <div id="log"></div>
 
   <script>
@@ -228,6 +255,30 @@
     document.getElementById('btn-clear').addEventListener('click', () => {
       logEl.innerHTML = '';
       entryCount = 0;
+    });
+
+    const hidDevicesEl = document.getElementById('hid-devices');
+    document.getElementById('btn-scan-hid').addEventListener('click', async () => {
+      if (!window.electronAPI || !window.electronAPI.getHidDevices) {
+        hidDevicesEl.textContent = 'getHidDevices not available';
+        hidDevicesEl.classList.add('visible');
+        return;
+      }
+      const devices = await window.electronAPI.getHidDevices();
+      hidDevicesEl.innerHTML = `<div style="color:#888; margin-bottom:6px;">전체 HID 디바이스 (${devices.length}개):</div>`;
+      devices.forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'hid-device';
+        div.innerHTML = `
+          <span class="dev-name">${d.product || '(no name)'}</span>
+          <span style="color:#888"> / ${d.manufacturer || '(no mfr)'}</span>
+          <br>
+          <span class="dev-ids">VID:0x${d.vendorId?.toString(16).padStart(4,'0')} PID:0x${d.productId?.toString(16).padStart(4,'0')}</span>
+          <span class="dev-usage"> usagePage:${d.usagePage} usage:${d.usage}</span>
+        `;
+        hidDevicesEl.appendChild(div);
+      });
+      hidDevicesEl.classList.add('visible');
     });
   </script>
 </body>

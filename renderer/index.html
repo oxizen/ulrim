@@ -25,7 +25,10 @@
     </div>
   </div>
   <div id="app">
-    <aside id="sidebar">
+    <button id="sidebar-toggle" title="Toggle sidebar">
+      <svg width="10" height="14" viewBox="0 0 10 14"><polyline points="2,2 8,7 2,12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <aside id="sidebar" class="collapsed">
       <div id="preset-section">
         <div class="sidebar-header">
           <h3>Presets</h3>
@@ -49,6 +52,7 @@
             <span class="hid-dot"></span>
             <span class="hid-label">JX-11</span>
           </div>
+          <button id="btn-input-debug" class="btn-debug" title="Input Debug">Debug</button>
           <button id="btn-stop-all" class="btn-stop" title="Stop all (Escape)" disabled>
             <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>
             Stop All

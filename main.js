@@ -8,7 +8,7 @@ let mainWindow;
 let debugWin = null;
 let hidDevice = null;
 
-// --- JX-11 HID ---
+// --- JX-11 HID (macOS) ---
 
 const JX11_BUTTONS = {
   0xcd: 'play-pause',
@@ -25,11 +25,10 @@ function findJX11() {
 }
 
 const JX11_SCAN_INTERVAL = 3000;
-const JX11_SCAN_TIMEOUT = 15000; // stop scanning after 15s
+const JX11_SCAN_TIMEOUT = 15000;
 let jx11ScanStart = 0;
 
 function broadcastHidStatus(status) {
-  // status: 'connected', 'disconnected', 'scanning'
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('hid-status', status);
   }
@@ -62,14 +61,11 @@ function connectJX11(manual = false) {
     let report1Emitted = false;
 
     hidDevice.on('data', (data) => {
-      // Button events: Report ID 0x03 (double-click left/right, long-press bottom)
       if (data[0] === 0x03 && data[1] !== 0x00) {
         const buttonName = JX11_BUTTONS[data[1]] || `unknown-0x${data[1].toString(16)}`;
         broadcast('jx11-button', buttonName);
       }
 
-      // Report ID 0x01: left/right single click, bottom click, wheel up/down
-      // Detect on b1 transition 0x00 → non-zero (start of gesture)
       if (data[0] === 0x01) {
         if (prevB1 === 0x00 && data[1] !== 0x00 && !report1Emitted) {
           const b2 = data[2], b3 = data[3], b4 = data[4];
@@ -90,7 +86,6 @@ function connectJX11(manual = false) {
           report1Emitted = true;
         }
 
-        // Reset when gesture ends (back to b1=0x00 after non-zero)
         if (data[1] === 0x00 && prevB1 !== null && prevB1 !== 0x00) {
           report1Emitted = false;
         }
@@ -110,6 +105,114 @@ function connectJX11(manual = false) {
     broadcastHidStatus('disconnected');
   }
 }
+
+// --- Windows: Raw Input HID bridge via C# child process ---
+
+const { spawn } = require('child_process');
+let bleBridgeProc = null;
+let bleBridgeRestarting = false;
+
+function startBleBridge() {
+  if (bleBridgeProc) {
+    try { bleBridgeProc.kill(); } catch {}
+    bleBridgeProc = null;
+  }
+  bleBridgeRestarting = false;
+  broadcastHidStatus('scanning');
+
+  const exePath = path.join(__dirname, 'ble-bridge', 'bin', 'publish', 'ble-bridge.exe');
+  console.log('[BLE Bridge] Starting C# bridge...');
+
+  bleBridgeProc = spawn(exePath, [], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+  let lineBuf = '';
+  bleBridgeProc.stdout.on('data', (chunk) => {
+    lineBuf += chunk.toString();
+    let nl;
+    while ((nl = lineBuf.indexOf('\n')) !== -1) {
+      const line = lineBuf.slice(0, nl).trim();
+      lineBuf = lineBuf.slice(nl + 1);
+      handleBridgeLine(line);
+    }
+  });
+
+  bleBridgeProc.stderr.on('data', (chunk) => {
+    console.log('[BLE Bridge] stderr:', chunk.toString().trim());
+  });
+
+  bleBridgeProc.on('close', (code) => {
+    console.log(`[BLE Bridge] Process exited (code ${code}), retrying in 5s...`);
+    bleBridgeProc = null;
+    broadcastHidStatus('disconnected');
+    if (!bleBridgeRestarting) {
+      bleBridgeRestarting = true;
+      setTimeout(() => startBleBridge(), 5000);
+    }
+  });
+}
+
+let blePrevB1 = null;
+let bleReport1Emitted = false;
+
+function handleBridgeLine(line) {
+  if (!line) return;
+  console.log('[BLE Bridge]', line);
+
+  if (line === 'CONNECTED') {
+    broadcastHidStatus('connected');
+    return;
+  }
+
+  if (line.startsWith('ERROR:')) {
+    console.log('[BLE Bridge] Error:', line);
+    return;
+  }
+
+  // REPORT:XX:hexdata  (XX = report ID hex, hexdata = payload without report ID)
+  if (line.startsWith('REPORT:')) {
+    const parts = line.split(':');
+    if (parts.length < 3) return;
+    const reportId = parseInt(parts[1], 16);
+    const payload = Buffer.from(parts[2], 'hex');
+
+    // Prepend report ID to match macOS HID format
+    const buf = Buffer.alloc(payload.length + 1);
+    buf[0] = reportId;
+    payload.copy(buf, 1);
+
+    if (buf[0] === 0x03 && buf[1] !== 0x00) {
+      const buttonName = JX11_BUTTONS[buf[1]] || `unknown-0x${buf[1].toString(16)}`;
+      broadcast('jx11-button', buttonName);
+      return;
+    }
+
+    if (buf[0] === 0x01) {
+      if (blePrevB1 === 0x00 && buf[1] !== 0x00 && !bleReport1Emitted) {
+        const b2 = buf[2], b3 = buf[3], b4 = buf[4];
+        if (b2 === 0xf4 && b3 === 0x01 && b4 === 0x19) {
+          broadcast('jx11-button', 'bottom-click');
+        } else if (b4 === 0x15) {
+          broadcast('jx11-wheel', 'wheel-up');
+        } else if (b4 === 0x26) {
+          broadcast('jx11-wheel', 'wheel-down');
+        } else if (b3 === 0x41 || (b3 & 0x0f) === 0x01) {
+          broadcast('jx11-button', 'left-click');
+        } else if (b3 === 0x42 || (b3 & 0x0f) === 0x02) {
+          broadcast('jx11-button', 'right-click');
+        } else {
+          broadcast('jx11-button', `unknown-${b2.toString(16)}-${b3.toString(16)}-${b4.toString(16)}`);
+        }
+        bleReport1Emitted = true;
+      }
+      if (buf[1] === 0x00 && blePrevB1 !== null && blePrevB1 !== 0x00) {
+        bleReport1Emitted = false;
+      }
+      blePrevB1 = buf[1];
+    }
+  }
+}
+
+// ---
 
 function broadcast(type, key) {
   const data = { type, key };
@@ -143,17 +246,22 @@ function createWindow() {
 
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized'));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-unmaximized'));
-  jx11ScanStart = Date.now();
-  connectJX11();
+
+  if (process.platform === 'win32') {
+    startBleBridge();
+  } else {
+    jx11ScanStart = Date.now();
+    connectJX11();
+  }
 }
 
 app.whenReady().then(() => {
   if (process.platform === 'darwin') {
     app.dock.setIcon(path.join(__dirname, 'assets', 'icon.png'));
   }
+
   createWindow();
 
-  // Auto-update
   autoUpdater.autoDownload = false;
   autoUpdater.checkForUpdates().catch(() => {});
 
@@ -168,6 +276,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (hidDevice) { try { hidDevice.close(); } catch {} }
+  if (bleBridgeProc) { try { bleBridgeProc.kill(); } catch {} }
   app.quit();
 });
 
@@ -180,8 +289,24 @@ ipcMain.handle('window-close', () => mainWindow.close());
 ipcMain.handle('window-is-maximized', () => mainWindow.isMaximized());
 
 ipcMain.handle('reconnect-hid', () => {
+  if (process.platform === 'win32') {
+    startBleBridge();
+    return;
+  }
   if (hidDevice) { try { hidDevice.close(); } catch {} hidDevice = null; }
   connectJX11(true);
+});
+
+ipcMain.handle('get-hid-devices', () => {
+  return HID.devices().map(d => ({
+    vendorId: d.vendorId,
+    productId: d.productId,
+    product: d.product,
+    manufacturer: d.manufacturer,
+    usagePage: d.usagePage,
+    usage: d.usage,
+    path: d.path,
+  }));
 });
 
 ipcMain.handle('open-input-debug', () => {

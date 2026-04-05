@@ -551,7 +551,7 @@ function renderSection(section) {
     el.dataset.padId = pad.id;
     el.dataset.section = section;
 
-    const shortcut = globalIndex < SHORTCUT_KEYS.length ? SHORTCUT_KEYS[globalIndex] : '';
+    const shortcut = section === 'sfx' && index < SHORTCUT_KEYS.length ? SHORTCUT_KEYS[index] : '';
 
     el.innerHTML = `
       <div class="drag-handle" title="Drag to reorder">&#x2630;</div>
@@ -731,10 +731,10 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   const idx = SHORTCUT_KEYS.indexOf(key);
-  const all = allPads();
-  if (idx !== -1 && idx < all.length) {
+  const sfxPads = pads.sfx;
+  if (idx !== -1 && idx < sfxPads.length) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const pad = all[idx];
+    const pad = sfxPads[idx];
     if (pad.source) {
       stopPad(pad);
       updatePadUI(pad);
@@ -831,6 +831,7 @@ if (window.electronAPI && window.electronAPI.onInputEvent) {
   });
 }
 
+
 // --- Init ---
 
 // --- Version ---
@@ -875,6 +876,7 @@ document.getElementById('btn-add-library').addEventListener('click', async () =>
 
 document.getElementById('btn-new-preset').addEventListener('click', () => showNewPresetModal());
 document.getElementById('btn-stop-all').addEventListener('click', stopAll);
+document.getElementById('btn-input-debug').addEventListener('click', () => window.electronAPI.openInputDebug());
 
 // HID status
 const hidStatusEl = document.getElementById('hid-status');
@@ -931,6 +933,11 @@ async function init() {
   renderLibrary();
   renderPresetList();
   await loadActivePreset();
+
+  // Sidebar toggle
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
 }
 
 init();
