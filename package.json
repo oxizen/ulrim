@@ -27,8 +27,13 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*",
-      "ble-bridge/bin/publish/ble-bridge.exe"
+      "renderer/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "ble-bridge/bin/publish/ble-bridge.exe",
+        "to": "ble-bridge.exe"
+      }
     ],
     "publish": {
       "provider": "github",

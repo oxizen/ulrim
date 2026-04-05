@@ -120,7 +120,9 @@ function startBleBridge() {
   bleBridgeRestarting = false;
   broadcastHidStatus('scanning');
 
-  const exePath = path.join(__dirname, 'ble-bridge', 'bin', 'publish', 'ble-bridge.exe');
+  const exePath = app.isPackaged
+    ? path.join(process.resourcesPath, 'ble-bridge.exe')
+    : path.join(__dirname, 'ble-bridge', 'bin', 'publish', 'ble-bridge.exe');
   console.log('[BLE Bridge] Starting C# bridge...');
 
   bleBridgeProc = spawn(exePath, [], { stdio: ['ignore', 'pipe', 'pipe'] });
