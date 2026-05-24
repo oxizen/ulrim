@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ble-bridge", "ble-bridge\ble-bridge.csproj", "{A66AE3EA-7886-A4CB-F031-9BE000A361FC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A66AE3EA-7886-A4CB-F031-9BE000A361FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A66AE3EA-7886-A4CB-F031-9BE000A361FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A66AE3EA-7886-A4CB-F031-9BE000A361FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A66AE3EA-7886-A4CB-F031-9BE000A361FC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {88FFA448-2452-477E-83F4-CEE93083C5A8}
+	EndGlobalSection
+EndGlobal
