@@ -440,9 +440,35 @@ header h1 {
 .section-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   background: #0f3460;
   flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.section-header:hover .section-chevron {
+  color: #eee;
+}
+
+.section-chevron {
+  display: flex;
+  align-items: center;
+  color: #888;
+  transition: transform 0.2s, color 0.15s;
+}
+
+.section.collapsed .section-chevron {
+  transform: rotate(-90deg);
+}
+
+.section.collapsed {
+  flex: 0 0 auto;
+}
+
+.section.collapsed .pad-grid {
+  display: none;
 }
 
 .section-title {

@@ -120,17 +120,20 @@ const FADE_OUT_MS = 80;
 
 function stopPad(pad, immediate = false) {
   if (!pad.source) return;
-  if (immediate || !pad.gainNode) {
-    try { pad.source.stop(); } catch {}
-    try { pad.source.disconnect(); } catch {}
-    if (pad.gainNode) try { pad.gainNode.disconnect(); } catch {}
+  const src = pad.source;
+  const gain = pad.gainNode;
+  // Detach onended so the delayed stop() doesn't clobber state for a
+  // newly-started source on the same pad (e.g. marker jump while playing).
+  src.onended = null;
+  if (immediate || !gain) {
+    try { src.stop(); } catch {}
+    try { src.disconnect(); } catch {}
+    if (gain) try { gain.disconnect(); } catch {}
     pad.source = null;
     pad.gainNode = null;
     return;
   }
   // Fade out
-  const gain = pad.gainNode;
-  const src = pad.source;
   gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
   gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + FADE_OUT_MS / 1000);
   setTimeout(() => {
@@ -260,6 +263,7 @@ async function loadActivePreset() {
   if (!preset) {
     document.getElementById('preset-title').textContent = '울림';
     renderAllSections();
+    applyCollapsedState();
     return;
   }
   // Migrate old flat pads → sections
@@ -276,6 +280,7 @@ async function loadActivePreset() {
     document.getElementById('preset-title').textContent = `${preset.name} — Loading...`;
   }
   renderAllSections();
+  applyCollapsedState();
 
   // Load one by one with UI updates between
   let loaded = 0;
@@ -542,6 +547,24 @@ function cleanupDrag() {
 
 function renderAllSections() {
   for (const sec of SECTIONS) renderSection(sec);
+}
+
+function applyCollapsedState() {
+  const preset = getActivePreset();
+  const collapsed = (preset && preset.collapsed) || {};
+  for (const sec of SECTIONS) {
+    const el = document.getElementById('section-' + sec);
+    if (el) el.classList.toggle('collapsed', !!collapsed[sec]);
+  }
+}
+
+function toggleSection(section) {
+  const preset = getActivePreset();
+  if (!preset) return;
+  if (!preset.collapsed) preset.collapsed = { sfx: false, mr: false };
+  preset.collapsed[section] = !preset.collapsed[section];
+  applyCollapsedState();
+  savePresets();
 }
 
 function renderSection(section) {
@@ -928,6 +951,11 @@ for (const sec of SECTIONS) {
   const grid = document.querySelector(`.pad-grid[data-section="${sec}"]`);
   setupGridDrop(grid, sec);
 }
+
+// Section collapse toggles
+document.querySelectorAll('[data-section-toggle]').forEach(header => {
+  header.addEventListener('click', () => toggleSection(header.dataset.sectionToggle));
+});
 
 async function init() {
   await loadPresets();
