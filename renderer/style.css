@@ -572,6 +572,47 @@ header h1 {
   cursor: pointer;
 }
 
+.pad .markers {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.pad .marker {
+  width: 26px;
+  height: 18px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #555;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.1s;
+}
+
+.pad .marker:hover {
+  border-color: #ffe66d;
+  color: #ffe66d;
+}
+
+.pad .marker.set {
+  background: #ffe66d;
+  border-color: #ffe66d;
+  color: #0a0a1a;
+}
+
+.pad .marker.set:hover {
+  background: #ffd84d;
+  border-color: #ffd84d;
+}
+
 .pad .btn-remove {
   position: absolute;
   top: 3px;

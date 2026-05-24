@@ -224,7 +224,11 @@ function saveCurrentPresetPads() {
   if (!preset) return;
   preset.sections = {};
   for (const sec of SECTIONS) {
-    preset.sections[sec] = pads[sec].map(p => ({ filePath: p.filePath, name: p.name, volume: p.volume }));
+    preset.sections[sec] = pads[sec].map(p => {
+      const item = { filePath: p.filePath, name: p.name, volume: p.volume };
+      if (sec === 'mr') item.markers = p.markers || [null, null, null];
+      return item;
+    });
   }
   savePresets();
 }
@@ -285,6 +289,7 @@ async function loadActivePreset() {
           filePath: item.filePath,
           name: item.name,
           volume: item.volume ?? 1.0,
+          markers: Array.isArray(item.markers) && item.markers.length === 3 ? item.markers : [null, null, null],
           section: sec, buffer, duration: buffer.duration, source: null, gainNode: null,
         });
       } catch { /* file missing */ }
@@ -307,7 +312,8 @@ async function addPadToSection(section, filePath, insertIndex = -1) {
     const buffer = await loadAudioBuffer(filePath);
     const pad = {
       id: 'pad-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-      filePath, name: nameFromPath(filePath), volume: 1.0, section, buffer, duration: buffer.duration, source: null, gainNode: null,
+      filePath, name: nameFromPath(filePath), volume: 1.0, markers: [null, null, null],
+      section, buffer, duration: buffer.duration, source: null, gainNode: null,
     };
     if (insertIndex >= 0 && insertIndex <= pads[section].length) {
       pads[section].splice(insertIndex, 0, pad);
@@ -330,6 +336,43 @@ function removePadFromSection(section, padId) {
     pads[section].splice(idx, 1);
     renderSection(section);
     saveCurrentPresetPads();
+  }
+}
+
+// --- Markers (MR only) ---
+
+function getCurrentPlayPosition(pad) {
+  if (pad.source && pad.startTime != null) return audioCtx.currentTime - pad.startTime;
+  if (pad.pausedAt != null) return pad.pausedAt;
+  return null;
+}
+
+function saveMarker(pad, slot) {
+  const pos = getCurrentPlayPosition(pad);
+  if (pos == null) return;
+  if (!Array.isArray(pad.markers)) pad.markers = [null, null, null];
+  pad.markers[slot] = Math.max(0, Math.min(pos, pad.duration));
+  saveCurrentPresetPads();
+  renderSection(pad.section);
+}
+
+function clearMarker(pad, slot) {
+  if (!Array.isArray(pad.markers) || pad.markers[slot] == null) return;
+  pad.markers[slot] = null;
+  saveCurrentPresetPads();
+  renderSection(pad.section);
+}
+
+function handleMarkerClick(pad, slot, shiftKey) {
+  const stored = pad.markers && pad.markers[slot];
+  if (shiftKey) {
+    saveMarker(pad, slot);
+    return;
+  }
+  if (stored == null) {
+    saveMarker(pad, slot);
+  } else {
+    playSoundFromBuffer(pad, stored);
   }
 }
 
@@ -517,6 +560,13 @@ function renderSection(section) {
     el.dataset.section = section;
 
     const shortcut = section === 'sfx' && index < SHORTCUT_KEYS.length ? SHORTCUT_KEYS[index] : '';
+    const markersHtml = section === 'mr'
+      ? `<div class="markers">${[0,1,2].map(i => {
+          const m = pad.markers && pad.markers[i];
+          const isSet = m != null;
+          return `<button class="marker${isSet ? ' set' : ''}" data-slot="${i}" title="${isSet ? formatTime(m) + ' (click to play, shift-click to overwrite, right-click to clear)' : 'Empty — play/pause then click to save current position'}">${i + 1}</button>`;
+        }).join('')}</div>`
+      : '';
 
     el.innerHTML = `
       <div class="drag-handle" title="Drag to reorder">&#x2630;</div>
@@ -525,6 +575,7 @@ function renderSection(section) {
       <div class="time-display"></div>
       ${shortcut ? `<div class="shortcut">${shortcut.toUpperCase()}</div>` : ''}
       <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="${pad.volume}" title="Volume">
+      ${markersHtml}
     `;
 
     const handle = el.querySelector('.drag-handle');
@@ -532,7 +583,7 @@ function renderSection(section) {
     el.addEventListener('dragend', () => { el.draggable = false; });
 
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.btn-remove') || e.target.closest('.volume-slider')) return;
+      if (e.target.closest('.btn-remove') || e.target.closest('.volume-slider') || e.target.closest('.marker')) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
       if (pad.source) {
         stopPad(pad);
@@ -555,6 +606,22 @@ function renderSection(section) {
       saveCurrentPresetPads();
     });
     slider.addEventListener('click', (e) => e.stopPropagation());
+
+    if (section === 'mr') {
+      el.querySelectorAll('.marker').forEach(btn => {
+        const slot = parseInt(btn.dataset.slot, 10);
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          handleMarkerClick(pad, slot, e.shiftKey);
+        });
+        btn.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          clearMarker(pad, slot);
+        });
+      });
+    }
 
     el.addEventListener('dragstart', handlers.handleDragStart);
     el.addEventListener('dragover', handlers.handleDragOver);
