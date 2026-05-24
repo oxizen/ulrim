@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -329,17 +329,6 @@ ipcMain.handle('open-input-debug', () => {
   });
   debugWin.loadFile('renderer/input-debug.html');
   debugWin.on('closed', () => { debugWin = null; });
-});
-
-ipcMain.handle('select-sound-files', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select Sound Files',
-    filters: [
-      { name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'] },
-    ],
-    properties: ['openFile', 'multiSelections'],
-  });
-  return result.filePaths;
 });
 
 // --- File-based persistence ---

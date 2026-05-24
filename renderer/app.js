@@ -1,13 +1,12 @@
 const audioCtx = new AudioContext();
 const SHORTCUT_KEYS = '1234567890qwertyuiopasdfghjklzxcvbnm'.split('');
-const FILE_LIBRARY = 'library.json';
 const FILE_PRESETS = 'presets.json';
 const FILE_ACTIVE = 'active-preset.json';
 const SECTIONS = ['sfx', 'mr'];
+const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus', 'webm'];
 
 // --- State ---
 
-let library = [];
 let presets = [];
 // Preset shape: { id, name, sections: { sfx: [{filePath, name, volume}], mr: [...] } }
 let activePresetId = null;
@@ -152,31 +151,24 @@ function allPads() {
   return [...pads.sfx, ...pads.mr];
 }
 
-// --- Library ---
+// --- File drop helpers ---
 
-function addToLibrary(filePaths) {
-  for (const filePath of filePaths) {
-    if (library.find(l => l.filePath === filePath)) continue;
-    const name = filePath.replace(/\\/g, '/').split('/').pop().replace(/\.[^.]+$/, '');
-    library.push({ filePath, name });
+function nameFromPath(filePath) {
+  return filePath.replace(/\\/g, '/').split('/').pop().replace(/\.[^.]+$/, '');
+}
+
+function isAudioFile(filePath) {
+  const ext = filePath.split('.').pop().toLowerCase();
+  return AUDIO_EXTS.includes(ext);
+}
+
+function extractDroppedAudioPaths(dataTransfer) {
+  const out = [];
+  for (const file of dataTransfer.files) {
+    const fp = window.electronAPI.getPathForFile(file);
+    if (fp && isAudioFile(fp)) out.push(fp);
   }
-  saveLibrary();
-  renderLibrary();
-}
-
-function removeFromLibrary(filePath) {
-  library = library.filter(l => l.filePath !== filePath);
-  saveLibrary();
-  renderLibrary();
-}
-
-function saveLibrary() {
-  window.electronAPI.saveData(FILE_LIBRARY, library);
-}
-
-async function loadLibrary() {
-  const data = await window.electronAPI.loadData(FILE_LIBRARY);
-  if (data) library = data;
+  return out;
 }
 
 // --- Presets ---
@@ -309,37 +301,25 @@ async function loadActivePreset() {
 
 // --- Pad management ---
 
-async function addPadToSection(section, filePath) {
-  if (pads[section].find(p => p.filePath === filePath)) return;
-  const libItem = library.find(l => l.filePath === filePath);
-  const name = libItem ? libItem.name : filePath.split('/').pop();
+async function addPadToSection(section, filePath, insertIndex = -1) {
+  if (pads[section].find(p => p.filePath === filePath)) return false;
   try {
     const buffer = await loadAudioBuffer(filePath);
-    pads[section].push({
+    const pad = {
       id: 'pad-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-      filePath, name, volume: 1.0, section, buffer, duration: buffer.duration, source: null, gainNode: null,
-    });
-    renderSection(section);
-    saveCurrentPresetPads();
-  } catch (err) {
-    console.error('Failed to load:', filePath, err);
-  }
-}
-
-async function replacePadInSection(section, index, filePath) {
-  const libItem = library.find(l => l.filePath === filePath);
-  const name = libItem ? libItem.name : filePath.split('/').pop();
-  try {
-    const buffer = await loadAudioBuffer(filePath);
-    stopPad(pads[section][index]);
-    pads[section][index] = {
-      id: 'pad-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-      filePath, name, volume: 1.0, section, buffer, duration: buffer.duration, source: null, gainNode: null,
+      filePath, name: nameFromPath(filePath), volume: 1.0, section, buffer, duration: buffer.duration, source: null, gainNode: null,
     };
+    if (insertIndex >= 0 && insertIndex <= pads[section].length) {
+      pads[section].splice(insertIndex, 0, pad);
+    } else {
+      pads[section].push(pad);
+    }
     renderSection(section);
     saveCurrentPresetPads();
+    return true;
   } catch (err) {
     console.error('Failed to load:', filePath, err);
+    return false;
   }
 }
 
@@ -384,43 +364,27 @@ function renderPresetList() {
   });
 }
 
-function renderLibrary() {
-  const ul = document.getElementById('library-list');
-  ul.innerHTML = '';
-  library.forEach(item => {
-    const li = document.createElement('li');
-    li.draggable = true;
-    li.innerHTML = `
-      <span class="lib-item-name" title="${escapeHtml(item.filePath)}">${escapeHtml(item.name)}</span>
-      <button class="lib-item-remove" title="Remove from library">&times;</button>
-    `;
-    li.querySelector('.lib-item-remove').addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeFromLibrary(item.filePath);
-    });
-    li.addEventListener('dblclick', () => {
-      if (getActivePreset()) addPadToSection('sfx', item.filePath);
-    });
-    li.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('application/ulrim-library', item.filePath);
-      e.dataTransfer.effectAllowed = 'copy';
-      li.classList.add('dragging');
-    });
-    li.addEventListener('dragend', () => li.classList.remove('dragging'));
-    ul.appendChild(li);
-  });
-}
-
 // --- Drag and Drop ---
 
 let dragSrcSection = null;
 let dragSrcIndex = null;
 
+function isFileDrag(e) {
+  return e.dataTransfer.types.includes('Files');
+}
+
+async function addFilesToSection(section, filePaths, insertIndex = -1) {
+  let idx = insertIndex;
+  for (const fp of filePaths) {
+    const added = await addPadToSection(section, fp, idx);
+    if (added && idx >= 0) idx++;
+  }
+}
+
 function setupGridDrop(grid, section) {
   grid.addEventListener('dragover', (e) => {
     e.preventDefault();
-    const isLib = e.dataTransfer.types.includes('application/ulrim-library');
-    e.dataTransfer.dropEffect = isLib ? 'copy' : 'move';
+    e.dataTransfer.dropEffect = isFileDrag(e) ? 'copy' : 'move';
     grid.classList.add('drag-target-active');
   });
   grid.addEventListener('dragleave', (e) => {
@@ -431,9 +395,10 @@ function setupGridDrop(grid, section) {
     grid.classList.remove('drag-target-active');
     if (e.target.closest('.pad')) return; // handled by pad's handleDrop
 
-    const libFp = e.dataTransfer.getData('application/ulrim-library');
-    if (libFp && getActivePreset()) {
-      addPadToSection(section, libFp);
+    if (isFileDrag(e)) {
+      if (!getActivePreset()) { cleanupDrag(); return; }
+      const paths = extractDroppedAudioPaths(e.dataTransfer);
+      if (paths.length > 0) addFilesToSection(section, paths);
       cleanupDrag();
       return;
     }
@@ -464,8 +429,7 @@ function createPadDragHandlers(section) {
     },
     handleDragOver(e) {
       e.preventDefault();
-      const isLib = e.dataTransfer.types.includes('application/ulrim-library');
-      e.dataTransfer.dropEffect = isLib ? 'copy' : 'move';
+      e.dataTransfer.dropEffect = isFileDrag(e) ? 'copy' : 'move';
       const padEl = e.target.closest('.pad');
       if (padEl && !padEl.classList.contains('dragging')) {
         document.querySelectorAll('.pad.drag-over').forEach(el => el.classList.remove('drag-over'));
@@ -480,13 +444,14 @@ function createPadDragHandlers(section) {
       e.preventDefault();
       e.stopPropagation();
 
-      // Library drop → replace
-      const libFp = e.dataTransfer.getData('application/ulrim-library');
-      if (libFp && getActivePreset()) {
+      // OS file drop on a pad → insert before that pad, pushing it back
+      if (isFileDrag(e)) {
+        if (!getActivePreset()) { cleanupDrag(); return; }
+        const paths = extractDroppedAudioPaths(e.dataTransfer);
         const padEl = e.target.closest('.pad');
-        if (padEl) {
+        if (padEl && paths.length > 0) {
           const idx = [...padEl.parentNode.children].indexOf(padEl);
-          replacePadInSection(section, idx, libFp);
+          addFilesToSection(section, paths, idx);
         }
         cleanupDrag();
         return;
@@ -497,11 +462,11 @@ function createPadDragHandlers(section) {
       const dropIndex = [...padEl.parentNode.children].indexOf(padEl);
 
       if (dragSrcSection === section) {
-        // Reorder within same section
+        // Reorder within same section: remove src and insert before target
         if (dragSrcIndex !== dropIndex) {
-          const temp = pads[section][dragSrcIndex];
-          pads[section][dragSrcIndex] = pads[section][dropIndex];
-          pads[section][dropIndex] = temp;
+          const [moved] = pads[section].splice(dragSrcIndex, 1);
+          const adjusted = dropIndex > dragSrcIndex ? dropIndex - 1 : dropIndex;
+          pads[section].splice(adjusted, 0, moved);
           saveCurrentPresetPads();
           renderSection(section);
         }
@@ -869,11 +834,6 @@ document.getElementById('btn-close').addEventListener('click', () => window.elec
 
 // --- Init ---
 
-document.getElementById('btn-add-library').addEventListener('click', async () => {
-  const files = await window.electronAPI.selectSoundFiles();
-  if (files.length > 0) addToLibrary(files);
-});
-
 document.getElementById('btn-new-preset').addEventListener('click', () => showNewPresetModal());
 document.getElementById('btn-stop-all').addEventListener('click', stopAll);
 document.getElementById('btn-input-debug').addEventListener('click', () => window.electronAPI.openInputDebug());
@@ -902,35 +862,8 @@ for (const sec of SECTIONS) {
   setupGridDrop(grid, sec);
 }
 
-// Migrate old data
-function migrateOldData() {
-  const oldPads = localStorage.getItem('oplayer-pads');
-  if (oldPads && library.length === 0 && presets.length === 0) {
-    const items = JSON.parse(oldPads);
-    items.forEach(item => {
-      if (!library.find(l => l.filePath === item.filePath)) {
-        library.push({ filePath: item.filePath, name: item.name });
-      }
-    });
-    saveLibrary();
-    const preset = {
-      id: 'preset-' + Date.now(),
-      name: 'Default',
-      sections: { sfx: [], mr: items.map(i => ({ filePath: i.filePath, name: i.name, volume: i.volume ?? 1.0 })) },
-    };
-    presets.push(preset);
-    activePresetId = preset.id;
-    savePresets();
-    saveActivePresetId();
-    localStorage.removeItem('oplayer-pads');
-  }
-}
-
 async function init() {
-  await loadLibrary();
   await loadPresets();
-  migrateOldData();
-  renderLibrary();
   renderPresetList();
   await loadActivePreset();
 

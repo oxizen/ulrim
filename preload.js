@@ -1,7 +1,7 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  selectSoundFiles: () => ipcRenderer.invoke('select-sound-files'),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   openInputDebug: () => ipcRenderer.invoke('open-input-debug'),
   onInputEvent: (callback) => ipcRenderer.on('input-event', (_event, data) => callback(data)),
   onHidStatus: (callback) => ipcRenderer.on('hid-status', (_event, status) => callback(status)),
