@@ -59,7 +59,11 @@ class Program
     static LowLevelKeyboardProc? _kbProc;
     static IntPtr _kbHook = IntPtr.Zero;
 
-    static readonly HashSet<uint> BlockedVKeys = new() { 0xAD, 0xAE, 0xAF }; // MUTE, VOL_DOWN, VOL_UP
+    static readonly HashSet<uint> BlockedVKeys = new()
+    {
+        0xAD, 0xAE, 0xAF, // MUTE, VOL_DOWN, VOL_UP
+        0xB0, 0xB1, 0xB2, 0xB3, // MEDIA_NEXT, MEDIA_PREV, MEDIA_STOP, MEDIA_PLAY_PAUSE
+    };
 
     static IntPtr KeyboardHookProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
