@@ -698,6 +698,26 @@ header h1 {
   box-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
 }
 
+.pad-drop-end {
+  min-height: 100px;
+  border: 2px dashed rgba(78, 205, 196, 0.35);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(78, 205, 196, 0.5);
+  font-size: 12px;
+  transition: all 0.12s;
+}
+
+.pad-drop-end.drag-over {
+  border-color: #4ecdc4;
+  border-style: solid;
+  color: #4ecdc4;
+  background: rgba(78, 205, 196, 0.1);
+  box-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+}
+
 /* --- Modal --- */
 
 .modal-overlay {

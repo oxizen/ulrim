@@ -512,9 +512,14 @@ function setupGridDrop(grid, section) {
     e.preventDefault();
     e.dataTransfer.dropEffect = isFileDrag(e) ? 'copy' : 'move';
     grid.classList.add('drag-target-active');
+    const endSlot = grid.querySelector('.pad-drop-end');
+    if (endSlot) endSlot.classList.toggle('drag-over', !!e.target.closest('.pad-drop-end'));
   });
   grid.addEventListener('dragleave', (e) => {
-    if (!grid.contains(e.relatedTarget)) grid.classList.remove('drag-target-active');
+    if (!grid.contains(e.relatedTarget)) {
+      grid.classList.remove('drag-target-active');
+      grid.querySelector('.pad-drop-end')?.classList.remove('drag-over');
+    }
   });
   grid.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -529,18 +534,58 @@ function setupGridDrop(grid, section) {
       return;
     }
 
-    // Pad dropped on empty area of another section → move to end
-    if (dragSrcSection && dragSrcSection !== section && dragSrcIndex !== null) {
+    if (dragSrcSection === null || dragSrcIndex === null) { cleanupDrag(); return; }
+    const onEndSlot = !!e.target.closest('.pad-drop-end');
+
+    // Pad dropped on the virtual end slot, or on empty area of another section → move to end
+    if (dragSrcSection !== section) {
       const [moved] = pads[dragSrcSection].splice(dragSrcIndex, 1);
       moved.section = section;
       pads[section].push(moved);
       saveCurrentPresetPads();
       renderSection(dragSrcSection);
       renderSection(section);
+    } else if (onEndSlot && dragSrcIndex !== pads[section].length - 1) {
+      const [moved] = pads[section].splice(dragSrcIndex, 1);
+      pads[section].push(moved);
+      saveCurrentPresetPads();
+      renderSection(section);
     }
     cleanupDrag();
   });
 }
+
+// While a pad (or an OS file) is being dragged, every grid gets a virtual trailing
+// slot so it can be dropped at the very end (there is no "after the last pad" target otherwise).
+function showDropEndSlots() {
+  for (const sec of SECTIONS) {
+    const grid = document.querySelector(`.pad-grid[data-section="${sec}"]`);
+    if (!grid || grid.querySelector('.pad-drop-end')) continue;
+    const slot = document.createElement('div');
+    slot.className = 'pad-drop-end';
+    slot.title = '맨 뒤로 이동';
+    slot.innerHTML = '<span>맨 뒤로</span>';
+    grid.appendChild(slot);
+  }
+}
+
+function hideDropEndSlots() {
+  hideDropEndSlots();
+}
+
+// OS file drags have no dragstart in the page: show the end slots when the drag
+// enters the window, hide when it leaves the window or is dropped anywhere.
+document.addEventListener('dragenter', (e) => {
+  if (isFileDrag(e)) showDropEndSlots();
+});
+document.addEventListener('dragleave', (e) => {
+  if (e.relatedTarget === null && isFileDrag(e)) hideDropEndSlots();
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault(); // never let the window navigate to a dropped file
+  hideDropEndSlots();
+});
 
 function createPadDragHandlers(section) {
   return {
@@ -552,6 +597,7 @@ function createPadDragHandlers(section) {
       padEl.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', dragSrcIndex.toString());
+      setTimeout(showDropEndSlots, 0);
     },
     handleDragOver(e) {
       e.preventDefault();
@@ -619,6 +665,7 @@ function cleanupDrag() {
   document.querySelectorAll('.pad.dragging').forEach(el => el.classList.remove('dragging'));
   document.querySelectorAll('.pad.drag-over').forEach(el => el.classList.remove('drag-over'));
   document.querySelectorAll('.drag-target-active').forEach(el => el.classList.remove('drag-target-active'));
+  document.querySelectorAll('.pad-drop-end').forEach(el => el.remove());
 }
 
 // --- UI: Pads ---
