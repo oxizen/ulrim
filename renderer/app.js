@@ -29,10 +29,42 @@ function stopSectionPads(section) {
   pads[section].forEach(p => { stopPad(p); p.pausedAt = null; updatePadUI(p); });
 }
 
-function playSoundFromBuffer(pad, offset = 0) {
-  if (pad.section === 'mr') stopSectionPads('mr');
-  else stopPad(pad);
+function fadeOutSectionPads(section, fadeMs) {
+  const playing = pads[section].filter(p => p.source);
+  playing.forEach(p => {
+    if (!p.gainNode) { stopPad(p, true); return; }
+    const gain = p.gainNode;
+    const src = p.source;
+    gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + fadeMs / 1000);
+    setTimeout(() => {
+      try { src.stop(); } catch {}
+      try { src.disconnect(); } catch {}
+      try { gain.disconnect(); } catch {}
+    }, fadeMs);
+    p.source = null;
+    p.gainNode = null;
+    p.pausedAt = null;
+    updatePadUI(p);
+  });
+}
 
+function playSoundFromBuffer(pad, offset = 0) {
+  if (pad.section === 'mr') {
+    const hasPlaying = pads.mr.some(p => p.source);
+    if (hasPlaying) {
+      fadeOutSectionPads('mr', MR_FADE_OUT_MS);
+      setTimeout(() => startPadPlayback(pad, offset), MR_FADE_OUT_MS);
+      return;
+    }
+    stopSectionPads('mr');
+  } else {
+    stopPad(pad);
+  }
+  startPadPlayback(pad, offset);
+}
+
+function startPadPlayback(pad, offset = 0) {
   const source = audioCtx.createBufferSource();
   const gainNode = audioCtx.createGain();
   source.buffer = pad.buffer;
@@ -117,6 +149,7 @@ function toggleMRPause() {
 }
 
 const FADE_OUT_MS = 80;
+const MR_FADE_OUT_MS = 800;
 
 function stopPad(pad, immediate = false) {
   if (!pad.source) return;
@@ -381,6 +414,51 @@ function handleMarkerClick(pad, slot, shiftKey) {
   }
 }
 
+// --- Scrub-to-seek (MR only) ---
+// Press on an MR pad and drag horizontally: the pad fills up like a timeline;
+// release to start playback from that position (works while stopped, paused or playing).
+
+const SCRUB_THRESHOLD_PX = 8;
+let scrub = null; // { pad, el, startX, active }
+
+function beginScrub(pad, el, e) {
+  pad.scrubSuppressClick = false;
+  scrub = { pad, el, startX: e.clientX, active: false };
+
+  const onMove = (ev) => {
+    if (!scrub) return;
+    if (!scrub.active) {
+      if (Math.abs(ev.clientX - scrub.startX) < SCRUB_THRESHOLD_PX) return;
+      scrub.active = true;
+      el.classList.add('scrubbing');
+    }
+    const rect = el.getBoundingClientRect();
+    const frac = Math.max(0, Math.min((ev.clientX - rect.left) / rect.width, 1));
+    pad.scrubPos = frac * pad.duration;
+  };
+
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    const s = scrub;
+    scrub = null;
+    if (!s || !s.active) return;
+    el.classList.remove('scrubbing');
+    const pos = Math.max(0, Math.min(pad.scrubPos ?? 0, Math.max(0, pad.duration - 0.1)));
+    pad.scrubPos = null;
+    pad.scrubSuppressClick = true; // swallow the click that follows mouseup
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (pad.source) {
+      pad.source.onended = null;
+      stopPad(pad);
+    }
+    playSoundFromBuffer(pad, pos);
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
 // --- UI: Sidebar ---
 
 function renderPresetList() {
@@ -607,6 +685,7 @@ function renderSection(section) {
 
     el.addEventListener('click', (e) => {
       if (e.target.closest('.btn-remove') || e.target.closest('.volume-slider') || e.target.closest('.marker')) return;
+      if (pad.scrubSuppressClick) { pad.scrubSuppressClick = false; return; }
       if (audioCtx.state === 'suspended') audioCtx.resume();
       if (pad.source) {
         stopPad(pad);
@@ -631,6 +710,12 @@ function renderSection(section) {
     slider.addEventListener('click', (e) => e.stopPropagation());
 
     if (section === 'mr') {
+      el.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('.btn-remove, .volume-slider, .marker, .drag-handle')) return;
+        beginScrub(pad, el, e);
+      });
+
       el.querySelectorAll('.marker').forEach(btn => {
         const slot = parseInt(btn.dataset.slot, 10);
         btn.addEventListener('click', (e) => {
@@ -692,6 +777,13 @@ function updateProgress() {
     if (!el) continue;
     const time = el.querySelector('.time-display');
 
+    if (pad.scrubPos != null) {
+      // Scrubbing: preview the start position being picked
+      const pct = Math.min(pad.scrubPos / pad.duration * 100, 100);
+      el.style.background = `linear-gradient(to right, rgba(78,205,196,0.45) ${pct}%, #16213e ${pct}%)`;
+      if (time) time.textContent = `${formatTime(pad.scrubPos)} / ${formatTime(pad.duration)}`;
+      continue;
+    }
     if (pad.pausedAt != null) {
       // Paused: show frozen progress
       const pct = Math.min(pad.pausedAt / pad.duration * 100, 100);

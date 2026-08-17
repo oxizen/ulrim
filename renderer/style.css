@@ -560,6 +560,12 @@ header h1 {
   border-color: #e94560;
 }
 
+.pad.scrubbing {
+  transform: none;
+  cursor: ew-resize;
+  border-color: #4ecdc4;
+}
+
 .pad .time-display {
   font-size: 10px;
   color: #555;
@@ -567,7 +573,8 @@ header h1 {
   min-height: 14px;
 }
 
-.pad.playing .time-display {
+.pad.playing .time-display,
+.pad.scrubbing .time-display {
   color: rgba(255, 255, 255, 0.8);
 }
 
