@@ -2,3 +2,4 @@ node_modules/
 dist/
 ble-bridge/bin/
 ble-bridge/obj/
+.idea

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "electron .",
     "start:mac": "unset ELECTRON_RUN_AS_NODE && electron .",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
   },
   "keywords": [],
   "author": "",
@@ -14,27 +15,36 @@
   "build": {
     "appId": "com.ulrim.soundboard",
     "productName": "울림",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "ble-bridge/bin/publish/ble-bridge.exe",
+          "to": "ble-bridge.exe"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "files": [
-      "main.js",
-      "preload.js",
-      "renderer/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "ble-bridge/bin/publish/ble-bridge.exe",
-        "to": "ble-bridge.exe"
-      }
-    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.png",
+      "notarize": false
+    },
     "publish": {
       "provider": "github",
       "owner": "oxizen",
