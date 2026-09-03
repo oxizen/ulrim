@@ -26,6 +26,7 @@ async function loadAudioBuffer(filePath) {
 }
 
 function stopSectionPads(section) {
+  if (section === 'mr') cancelPendingMRStart();
   pads[section].forEach(p => { stopPad(p); p.pausedAt = null; updatePadUI(p); });
 }
 
@@ -49,12 +50,39 @@ function fadeOutSectionPads(section, fadeMs) {
   });
 }
 
+// A pending MR start scheduled behind a crossfade. Only ever one at a time:
+// fadeOutSectionPads() clears pad.source immediately, so a second play request
+// during the fade would otherwise see "nothing playing", start right away and
+// leave the earlier timer to start an orphan source that plays on top of it.
+let mrPendingStart = null; // { timer, at }
+
+function cancelPendingMRStart() {
+  if (!mrPendingStart) return;
+  clearTimeout(mrPendingStart.timer);
+  mrPendingStart = null;
+}
+
+function scheduleMRStart(pad, offset, delayMs) {
+  const timer = setTimeout(() => {
+    mrPendingStart = null;
+    startPadPlayback(pad, offset);
+  }, delayMs);
+  mrPendingStart = { timer, at: Date.now() + delayMs };
+}
+
 function playSoundFromBuffer(pad, offset = 0) {
   if (pad.section === 'mr') {
-    const hasPlaying = pads.mr.some(p => p.source);
-    if (hasPlaying) {
+    if (mrPendingStart) {
+      // Crossfade already running: retarget it instead of stacking another
+      // start, and keep the original deadline so delays don't compound.
+      const remaining = Math.max(0, mrPendingStart.at - Date.now());
+      cancelPendingMRStart();
+      scheduleMRStart(pad, offset, remaining);
+      return;
+    }
+    if (pads.mr.some(p => p.source)) {
       fadeOutSectionPads('mr', MR_FADE_OUT_MS);
-      setTimeout(() => startPadPlayback(pad, offset), MR_FADE_OUT_MS);
+      scheduleMRStart(pad, offset, MR_FADE_OUT_MS);
       return;
     }
     stopSectionPads('mr');
@@ -65,6 +93,9 @@ function playSoundFromBuffer(pad, offset = 0) {
 }
 
 function startPadPlayback(pad, offset = 0) {
+  // Defensive: never overwrite a live source, which would leave it playing
+  // with nothing referencing it (unstoppable overlap).
+  if (pad.source) stopPad(pad);
   const source = audioCtx.createBufferSource();
   const gainNode = audioCtx.createGain();
   source.buffer = pad.buffer;
@@ -140,6 +171,9 @@ function seekMR(delta) {
 }
 
 function toggleMRPause() {
+  // Pause pressed mid-crossfade: drop the queued start instead of letting it
+  // fire into a "paused" state.
+  if (mrPendingStart) { cancelPendingMRStart(); return; }
   const playing = pads.mr.find(p => p.source);
   if (playing) {
     pauseMR();
@@ -179,6 +213,7 @@ function stopPad(pad, immediate = false) {
 }
 
 function stopAll() {
+  cancelPendingMRStart();
   allPads().forEach(stopPad);
   updateAllPadUI();
 }
