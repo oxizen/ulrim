@@ -6,7 +6,7 @@
     "start": "electron .",
     "start:mac": "unset ELECTRON_RUN_AS_NODE && electron .",
     "build": "electron-builder --win",
-    "build:mac": "electron-builder --mac"
+    "build:mac": "electron-builder --mac -c.mac.notarize=false"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +15,7 @@
   "build": {
     "appId": "com.ulrim.soundboard",
     "productName": "울림",
+    "afterPack": "build/afterPack.js",
     "files": [
       "main.js",
       "preload.js",
